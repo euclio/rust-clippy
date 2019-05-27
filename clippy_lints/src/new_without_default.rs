@@ -153,46 +153,32 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for NewWithoutDefault {
                                         }
                                     }
 
-                                    if let Some(sp) = can_derive_default(self_ty, cx, default_trait_id) {
-                                        span_lint_hir_and_then(
-                                            cx,
-                                            NEW_WITHOUT_DEFAULT,
-                                            id,
-                                            impl_item.span,
-                                            &format!(
-                                                "you should consider deriving a `Default` implementation for `{}`",
-                                                self_ty
-                                            ),
-                                            |db| {
+                                    span_lint_hir_and_then(
+                                        cx,
+                                        NEW_WITHOUT_DEFAULT,
+                                        id,
+                                        impl_item.span,
+                                        &format!("`{}` defines `new()` but does not implement `Default`", self_ty),
+                                        |db| {
+                                            if let Some(derive_sp) = can_derive_default(self_ty, cx, default_trait_id) {
                                                 db.suggest_item_with_attr(
                                                     cx,
-                                                    sp,
-                                                    "try this",
+                                                    derive_sp,
+                                                    "consider deriving a `Default` implementation",
                                                     "#[derive(Default)]",
                                                     Applicability::MaybeIncorrect,
                                                 );
-                                            });
-                                    } else {
-                                        span_lint_hir_and_then(
-                                            cx,
-                                            NEW_WITHOUT_DEFAULT,
-                                            id,
-                                            impl_item.span,
-                                            &format!(
-                                                "you should consider adding a `Default` implementation for `{}`",
-                                                self_ty
-                                            ),
-                                            |db| {
+                                            } else {
                                                 db.suggest_prepend_item(
                                                     cx,
                                                     item.span,
-                                                    "try this",
+                                                    "consider implementing `Default` in terms of `new()`",
                                                     &create_new_without_default_suggest_msg(self_ty),
                                                     Applicability::MaybeIncorrect,
                                                 );
-                                            },
-                                        );
-                                    }
+                                            }
+                                        },
+                                    );
                                 }
                             }
                         }
